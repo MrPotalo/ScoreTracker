@@ -29,27 +29,29 @@ class ScoreLabel extends Component {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 15
-  },
   text: {
+    alignSelf: 'center',
     fontSize: 15
   },
   score: {
+    alignSelf: 'center',
     fontSize: 18,
     color: "red"
   },
   verticalLayout: {
     flexDirection: "column",
-    alignItems: "center",
-    marginTop: 20,
+    alignItems: 'stretch',
     flex: 1,
-    padding: 5
+    padding: 0
   },
   numberInput: {
+    marginVertical: 10,
+    alignSelf: 'center',
+    textAlign: 'center',
     borderWidth: 1,
-    borderColor: 'black'
+    borderColor: 'black',
+    height: 40,
+    width: 60
   }
 });
 
