@@ -9,7 +9,8 @@
     "test": "jest",
     "lint": "eslint .",
     "emulator": "emulator @Pixel",
-    "build": "react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res/ && cd android && ./gradlew assembleDebug"
+    "build": "react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res/ && cd android && ./gradlew assembleDebug && echo 'apk in android/app/build/outputs/apk/debug/app-debug'",
+    "release": "cd android && ./gradlew assembleRelease && echo 'apk in android/app/build/outputs/apk"
   },
   "dependencies": {
     "lodash": "^4.17.15",
