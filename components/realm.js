@@ -7,6 +7,7 @@ export default new Realm({
   schemaVersion: 2,
   migration: (oldRealm, newRealm) => {
     if (oldRealm.schemaVersion < 2) {
+      console.log(oldRealm.schemaVersion);
       oldRealm.objects('Game').forEach((game, i) => {
         const newGame = newRealm.objects('Game')[i];
         delete newGame.scores;

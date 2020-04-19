@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import React, { Component } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Dimensions } from 'react-native';
 import ScoreLabel from './../ScoreLabel';
 import realm from '../realm';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -12,10 +12,20 @@ class ScoreScreen extends Component {
     super(props);
 
     realm.addListener('change', this.updateData);
-
+    Dimensions.addEventListener('change', (dim) => {
+      this.setState({
+        isLandscape: dim.width > dim.height,
+        width: dim.width,
+        height: dim.height
+      });
+    })
+    const dim = Dimensions.get('screen');
     this.state = {
       game: realm.objects('Game')[this.props.gameIndex],
-      nextScores: []
+      nextScores: [],
+      width: dim.width,
+      height: dim.height,
+      isLandscape: dim.width > dim.height
     };
   }
 
@@ -34,13 +44,14 @@ class ScoreScreen extends Component {
   }
 
   addRound = () => {
+    if (this.state.nextScores.length === 0) {
+      return;
+    }
     realm.write(() => {
       const scores = [];
       for (let i = 0; i < this.state.nextScores.length; i++) {
         scores.push(parseInt(this.state.nextScores[i]) || 0);
       }
-      console.log(scores);
-      console.log(realm.objects('Game')[this.props.gameIndex].rounds[realm.objects('Game')[this.props.gameIndex].rounds.length - 1]);
       realm.objects('Game')[this.props.gameIndex].rounds.push({ ts: new Date(), scores });
     });
     this.setState({
@@ -55,12 +66,56 @@ class ScoreScreen extends Component {
   }
 
   render() {
-    const { game, nextScores } = this.state;
+    const { game, nextScores, isLandscape, width } = this.state;
     if (!game) {
       return null;
     }
+
+    const scoreLabelContent = [];
+    let scoresPerRow;
+    if (isLandscape) {
+      scoresPerRow = 8;
+    } else {
+      scoresPerRow = 4;
+    }
+    const rows = Math.ceil(game.players.length / scoresPerRow);
+    for (let i = 0; i < rows; i++) {
+      const scoreLabels = [];
+      for (let j = 0; j < scoresPerRow; j++) {
+        const scoreIndex = i * scoresPerRow + j;
+        if (!game.players[scoreIndex]) {
+          break;
+        }
+        const score = game.rounds.reduce((acc, curr) => {
+          return acc + (curr.scores[scoreIndex] || 0);
+        }, 0);
+        scoreLabels.push(
+          <ScoreLabel index={scoreIndex} key={j} text={game.players[scoreIndex]} score={score} nextScore={nextScores[scoreIndex] || ""} setNextScore={this.setNextScore} />
+        );
+      }
+      scoreLabelContent.push(
+        <View style={styles.scoreContainer}>
+          {scoreLabels}
+        </View>
+      )
+    }
+
+    const summaryColumns = [];
+    for (let i = 0; i < game.players.length; i++) {
+      const summaryColumn = [];
+      summaryColumn.push(<View key={-1} style={styles.summaryCell}><Text>{game.players[i]}</Text></View>);
+      for (let j = 0; j < game.rounds.length; j++) {
+        summaryColumn.push(<View key={j} style={styles.summaryCell}><Text>{game.rounds[j].scores[i] || 0}</Text></View>)
+      }
+      summaryColumns.push(<View key={i} style={styles.verticalSummary}>{summaryColumn}</View>);
+    }
+
+    const roundSummaryContent = <ScrollView style={styles.horizontalScroll} horizontal={true}>
+      {summaryColumns}
+    </ScrollView>;
+
     return (
-      <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.container}>
         <TouchableOpacity style={{flexDirection: 'row', alignSelf: 'flex-end', height: 25}} onPress={() => {
           prompt('New Player', 'Choose a name for your new player.', [
             {text: 'Cancel', style: 'cancel'},
@@ -74,14 +129,7 @@ class ScoreScreen extends Component {
         }}>
           <Icon size={25} name="add"></Icon>
         </TouchableOpacity>
-        <View style={styles.scoreContainer}>
-          {_.map(game.players, (player, i) => {
-            const score = game.rounds.reduce((acc, curr) => {
-              return acc + (curr.scores[i] || 0);
-            }, 0);
-            return <ScoreLabel index={i} key={i} text={player} score={score} nextScore={nextScores[i] || ""} setNextScore={this.setNextScore} />
-          })}
-        </View>
+        {scoreLabelContent}
         <TouchableOpacity style={styles.applyButton} onPress={this.addRound}>
             <Text>Apply Scores</Text>
           </TouchableOpacity>
@@ -98,7 +146,8 @@ class ScoreScreen extends Component {
           }}>
             <Text style={styles.deleteText}>Delete Game</Text>
           </TouchableOpacity>
-      </View>
+          {roundSummaryContent}
+      </ScrollView>
     )
   }
 }
@@ -109,8 +158,8 @@ const styles = StyleSheet.create({
     alignContent: "center"
   },
   container: {
-    flex: 1,
-    alignItems: 'center'
+    alignItems: 'center',
+    paddingBottom: 15
   },
   applyButton: {
     borderWidth: 1,
@@ -128,6 +177,26 @@ const styles = StyleSheet.create({
   },
   deleteText: {
     color: 'white'
+  },
+  scrollContainer: {
+    flex: 1,
+    marginTop: 50
+  },
+  horizontalScroll: {
+    alignSelf: 'stretch',
+    paddingVertical: 5,
+    marginTop: 35
+  },
+  verticalSummary: {
+    flexDirection: 'column',
+    flex: 1,
+  },
+  summaryCell: {
+    flex: 1,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd'
   }
 });
 
