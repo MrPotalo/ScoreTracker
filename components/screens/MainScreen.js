@@ -10,12 +10,14 @@ export class MainScreen extends Component {
   constructor(props) {
     super(props);
 
+    realm.addListener('change', this.updateData);
+
     this.state = {
       games: _.values(realm.objects('Game'))
     }
   }
 
-  updateData() {
+  updateData = () => {
     this.setState({
       games: _.values(realm.objects('Game'))
     });
@@ -40,7 +42,6 @@ export class MainScreen extends Component {
             {text: 'Create', onPress: (name) => {
               realm.write(() => {
                 realm.create('Game', {name, players: [], scores: []});
-                this.updateData();
               });
             }}
           ]);

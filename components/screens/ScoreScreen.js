@@ -11,6 +11,8 @@ class ScoreScreen extends Component {
   constructor(props) {
     super(props);
 
+    // realm.addListener('change', updateData);
+
     this.state = {
       game: realm.objects('Game')[this.props.gameIndex],
       nextScores: []
@@ -25,6 +27,19 @@ class ScoreScreen extends Component {
         nextScores
       }
     })
+  }
+
+  addRound = () => {
+    realm.write(() => {
+      const scores = [];
+      for (let i = 0; i < scores.length; i++) {
+        scores.push(parseInt(this.state.nextScores[i]) || 0);
+      }
+      realm.objects('Game')[this.props.gameIndex].rounds.push({ scores });
+    });
+    this.setState({
+      nextScores: []
+    });
   }
 
   updateData = () => {
@@ -43,12 +58,10 @@ class ScoreScreen extends Component {
             {text: 'Add', onPress: (name) => {
               realm.write(() => {
                 const game = realm.objects('Game')[this.props.gameIndex];
-                console.log(game.players);
                 game.scores.push(0);
                 game.players.push(name);
                 console.log(game.players);
               });
-              this.updateData();
             }}
           ]);
         }}>
@@ -56,25 +69,17 @@ class ScoreScreen extends Component {
         </TouchableOpacity>
         <View style={styles.scoreContainer}>
           {_.map(game.players, (player, i) => {
-            return <ScoreLabel index={i} key={i} text={player} score={game.scores[i]} nextScore={nextScores[i] || ""} setNextScore={this.setNextScore} />
+            const score = game.rounds.reduce((acc, curr) => {
+              return acc + curr[i];
+            }, 0);
+            return <ScoreLabel index={i} key={i} text={player} score={score} nextScore={nextScores[i] || ""} setNextScore={this.setNextScore} />
           })}
         </View>
-        <TouchableOpacity style={styles.applyButton} onPress={() => {
-            realm.write(() => {
-              const scores = realm.objects('Game')[this.props.gameIndex].scores;
-              for (let i = 0; i < scores.length; i++) {
-                scores[i] += parseInt(this.state.nextScores[i]) || 0;
-              }
-            });
-            this.updateData();
-            this.setState({
-              nextScores: []
-            });
-          }}>
+        <TouchableOpacity style={styles.applyButton} onPress={this.addRound}>
             <Text>Apply Scores</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.deleteButton} onPress={() => {
-            Alert.alert("Delete?", "Are you sure you want to delete game?", [
+            Alert.alert("Delete?", "Are you sure you want to delete " + this.state.game.name + "?", [
               {text: "Cancel", type: 'cancel'},
               {text: 'Confirm', onPress: () => {
                 realm.write(() => {
