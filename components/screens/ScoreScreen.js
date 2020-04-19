@@ -11,12 +11,16 @@ class ScoreScreen extends Component {
   constructor(props) {
     super(props);
 
-    // realm.addListener('change', updateData);
+    realm.addListener('change', this.updateData);
 
     this.state = {
       game: realm.objects('Game')[this.props.gameIndex],
       nextScores: []
     };
+  }
+
+  componentWillUnmount() {
+    realm.removeListener('change', this.updateData);
   }
 
   setNextScore = (i, score) => {
@@ -32,10 +36,12 @@ class ScoreScreen extends Component {
   addRound = () => {
     realm.write(() => {
       const scores = [];
-      for (let i = 0; i < scores.length; i++) {
+      for (let i = 0; i < this.state.nextScores.length; i++) {
         scores.push(parseInt(this.state.nextScores[i]) || 0);
       }
-      realm.objects('Game')[this.props.gameIndex].rounds.push({ scores });
+      console.log(scores);
+      console.log(realm.objects('Game')[this.props.gameIndex].rounds[realm.objects('Game')[this.props.gameIndex].rounds.length - 1]);
+      realm.objects('Game')[this.props.gameIndex].rounds.push({ ts: new Date(), scores });
     });
     this.setState({
       nextScores: []
@@ -50,6 +56,9 @@ class ScoreScreen extends Component {
 
   render() {
     const { game, nextScores } = this.state;
+    if (!game) {
+      return null;
+    }
     return (
       <View style={styles.container}>
         <TouchableOpacity style={{flexDirection: 'row', alignSelf: 'flex-end', height: 25}} onPress={() => {
@@ -58,9 +67,7 @@ class ScoreScreen extends Component {
             {text: 'Add', onPress: (name) => {
               realm.write(() => {
                 const game = realm.objects('Game')[this.props.gameIndex];
-                game.scores.push(0);
                 game.players.push(name);
-                console.log(game.players);
               });
             }}
           ]);
@@ -70,7 +77,7 @@ class ScoreScreen extends Component {
         <View style={styles.scoreContainer}>
           {_.map(game.players, (player, i) => {
             const score = game.rounds.reduce((acc, curr) => {
-              return acc + curr[i];
+              return acc + (curr.scores[i] || 0);
             }, 0);
             return <ScoreLabel index={i} key={i} text={player} score={score} nextScore={nextScores[i] || ""} setNextScore={this.setNextScore} />
           })}

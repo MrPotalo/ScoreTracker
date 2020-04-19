@@ -1,6 +1,6 @@
 import 'realm';
 
-const Round = { name: 'Round', properties: { scores: 'int[]' }};
+const Round = { name: 'Round', properties: { ts: 'date', scores: 'int[]' }};
 
 export default new Realm({
   schema: [Round, {name: "Game", properties: {name: 'string', players: 'string[]', rounds: 'Round[]'}}],
@@ -10,7 +10,7 @@ export default new Realm({
       oldRealm.objects('Game').forEach((game, i) => {
         const newGame = newRealm.objects('Game')[i];
         delete newGame.scores;
-        newGame.rounds = [{ scores: game.scores }];
+        newGame.rounds = [{ ts: new Date(), scores: game.scores }];
       });
     }
   }

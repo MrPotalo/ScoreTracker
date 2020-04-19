@@ -17,6 +17,10 @@ export class MainScreen extends Component {
     }
   }
 
+  componentWillUnmount() {
+    realm.removeListener('change', this.updateData);
+  }
+
   updateData = () => {
     this.setState({
       games: _.values(realm.objects('Game'))
@@ -41,7 +45,7 @@ export class MainScreen extends Component {
             {text: 'Cancel', style: 'cancel'},
             {text: 'Create', onPress: (name) => {
               realm.write(() => {
-                realm.create('Game', {name, players: [], scores: []});
+                realm.create('Game', {name, players: [], rounds: []});
               });
             }}
           ]);
