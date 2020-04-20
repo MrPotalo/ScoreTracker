@@ -14,7 +14,9 @@
     "release": "cd android && ./gradlew assembleRelease && echo 'apk in android/app/build/outputs/apk"
   },
   "dependencies": {
+    "@react-native-community/picker": "^1.3.0",
     "lodash": "^4.17.15",
+    "moment": "^2.24.0",
     "react": "16.11.0",
     "react-native": "0.62.2",
     "react-native-prompt-android": "^1.1.0",

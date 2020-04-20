@@ -1,10 +1,14 @@
 import _ from 'lodash';
 import React, { Component } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Dimensions, Keyboard } from 'react-native';
 import ScoreLabel from './../ScoreLabel';
 import realm from '../realm';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import prompt from 'react-native-prompt-android';
+import moment from 'moment';
+import { Picker } from '@react-native-community/picker';
+
+const DATE_FORMAT = 'MMM D, YYYY LT';
 
 class ScoreScreen extends Component {
 
@@ -25,8 +29,32 @@ class ScoreScreen extends Component {
       nextScores: [],
       width: dim.width,
       height: dim.height,
-      isLandscape: dim.width > dim.height
+      isLandscape: dim.width > dim.height,
+      dateStart: moment().startOf('D'),
+      dateEnd: moment().endOf('D'),
+      selectedDateRange: 'daily'
     };
+  }
+
+  DATE_RANGES = {
+    daily: {
+      label: 'Daily',
+      fn: () => {
+        this.setState({
+          dateStart: moment().startOf('D'),
+          dateEnd: moment().endOf('D')
+        });
+      }
+    },
+    alltime: {
+      label: 'All time',
+      fn: () => {
+        this.setState({
+          dateStart: null,
+          dateEnd: null
+        });
+      }
+    }
   }
 
   componentWillUnmount() {
@@ -44,6 +72,7 @@ class ScoreScreen extends Component {
   }
 
   addRound = () => {
+    Keyboard.dismiss();
     if (this.state.nextScores.length === 0) {
       return;
     }
@@ -66,7 +95,7 @@ class ScoreScreen extends Component {
   }
 
   render() {
-    const { game, nextScores, isLandscape, width } = this.state;
+    const { game, nextScores, isLandscape, dateStart, dateEnd, selectedDateRange } = this.state;
     if (!game) {
       return null;
     }
@@ -87,6 +116,9 @@ class ScoreScreen extends Component {
           break;
         }
         const score = game.rounds.reduce((acc, curr) => {
+          if (dateStart && !moment(curr.ts).isBetween(dateStart, dateEnd)) {
+            return acc;
+          }
           return acc + (curr.scores[scoreIndex] || 0);
         }, 0);
         scoreLabels.push(
@@ -94,18 +126,23 @@ class ScoreScreen extends Component {
         );
       }
       scoreLabelContent.push(
-        <View style={styles.scoreContainer}>
+        <View key={-1} style={styles.scoreContainer}>
           {scoreLabels}
         </View>
       )
     }
 
     const summaryColumns = [];
+    const dateColumnContent = [];
+    for (let i = 0; i < game.rounds.length; i++) {
+      dateColumnContent.push(<View key={i} style={styles.summaryCell}><Text style={!dateStart || moment(game.rounds[i].ts).isBetween(dateStart, dateEnd) ? null : styles.notInDateRange}>{moment(game.rounds[i].ts).format(DATE_FORMAT)}</Text></View>)
+    }
+    summaryColumns.push(<View key={-1} style={styles.verticalDateSummary}>{dateColumnContent}</View>);
     for (let i = 0; i < game.players.length; i++) {
       const summaryColumn = [];
       summaryColumn.push(<View key={-1} style={styles.summaryCell}><Text>{game.players[i]}</Text></View>);
       for (let j = 0; j < game.rounds.length; j++) {
-        summaryColumn.push(<View key={j} style={styles.summaryCell}><Text>{game.rounds[j].scores[i] || 0}</Text></View>)
+        summaryColumn.push(<View key={j} style={styles.summaryCell}><Text style={!dateStart || moment(game.rounds[j].ts).isBetween(dateStart, dateEnd) ? null : styles.notInDateRange}>{game.rounds[j].scores[i] || 0}</Text></View>)
       }
       summaryColumns.push(<View key={i} style={styles.verticalSummary}>{summaryColumn}</View>);
     }
@@ -115,7 +152,7 @@ class ScoreScreen extends Component {
     </ScrollView>;
 
     return (
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView keyboardShouldPersistTaps={'handled'} contentContainerStyle={styles.container}>
         <TouchableOpacity style={{flexDirection: 'row', alignSelf: 'flex-end', height: 25}} onPress={() => {
           prompt('New Player', 'Choose a name for your new player.', [
             {text: 'Cancel', style: 'cancel'},
@@ -146,6 +183,19 @@ class ScoreScreen extends Component {
           }}>
             <Text style={styles.deleteText}>Delete Game</Text>
           </TouchableOpacity>
+          <View style={styles.pickerHolder}>
+            <Picker style={styles.dateRangePicker} selectedValue={selectedDateRange} onValueChange={(itemValue) => {
+              this.setState({
+                selectedDateRange: itemValue
+              });
+              this.DATE_RANGES[itemValue].fn();
+            }}>
+              {_.map(Object.keys(this.DATE_RANGES), (key, i) => {
+                console.log(this.DATE_RANGES[key]);
+                return <Picker.Item key={i} label={this.DATE_RANGES[key].label} value={key} />
+              })}
+            </Picker>
+          </View>
           {roundSummaryContent}
       </ScrollView>
     )
@@ -185,18 +235,35 @@ const styles = StyleSheet.create({
   horizontalScroll: {
     alignSelf: 'stretch',
     paddingVertical: 5,
-    marginTop: 35
+    marginTop: 25
   },
   verticalSummary: {
     flexDirection: 'column',
     flex: 1,
   },
-  summaryCell: {
+  verticalDateSummary: {
+    flexDirection: 'column',
     flex: 1,
+    justifyContent: 'flex-end',
+  },
+  summaryCell: {
+    // flex: 1,
     paddingHorizontal: 10,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#ddd'
+  },
+  notInDateRange: {
+    color: '#aaaaaa'
+  },
+  dateRangePicker: {
+    width: 120,
+    height: 40
+  },
+  pickerHolder: {
+    borderBottomWidth: 1,
+    borderColor: '#aaaaaa',
+    marginTop: 10
   }
 });
 
