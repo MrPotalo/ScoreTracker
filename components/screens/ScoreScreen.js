@@ -168,7 +168,7 @@ class ScoreScreen extends Component {
         for (let k = 0; k < (game.rounds[j].scoresets[0] ? game.rounds[j].scoresets[0].scores.length : 1); k++) {
           let score = 0;
           if (game.rounds[j].scoresets[i]) {
-            score = game.rounds[j].scoresets[i].scores[k];
+            score = game.rounds[j].scoresets[i].scores[k] || 0;
           }
           summaryColumn.push(<View key={summaryColumn.length} style={styles.summaryCell}><Text style={!dateStart || moment(game.rounds[j].ts).isBetween(dateStart, dateEnd) ? null : styles.notInDateRange}>{score}</Text></View>)
         }
