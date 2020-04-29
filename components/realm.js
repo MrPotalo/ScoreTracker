@@ -2,6 +2,23 @@ import 'realm';
 
 const Round = { name: 'Round', properties: { ts: 'date', scores: 'int[]' }};
 
+/*
+Example DB
+{
+  games: [
+    {name: 'example', players: [
+      'example1', 'example2'
+    ],
+    rounds: [
+      ts: 'datetime',
+      scores: [
+        50, 75
+      ]
+    ]}
+  ]
+}
+*/
+
 export default new Realm({
   schema: [Round, {name: "Game", properties: {name: 'string', players: 'string[]', rounds: 'Round[]'}}],
   schemaVersion: 2,
