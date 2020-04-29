@@ -34,9 +34,9 @@ export default new Realm({
     }
 
     if (oldRealm.schemaVersion < 3) {
-      newRealm.objects('Game').forEach((game) => {
-        game.rounds.forEach((round) => {
-          round.scoresets = round.scores.map((score) => {
+      oldRealm.objects('Game').forEach((game, i) => {
+        game.rounds.forEach((round, j) => {
+          newRealm.objects('Game')[i].rounds[j].scoresets = round.scores.map((score) => {
             return {scores: [score]}
           });
         })
