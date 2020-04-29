@@ -32,27 +32,36 @@ class ScoreScreen extends Component {
       isLandscape: dim.width > dim.height,
       dateStart: moment().startOf('D'),
       dateEnd: moment().endOf('D'),
-      selectedDateRange: 'daily'
+      selectedDateRange: 'today'
     };
   }
 
   DATE_RANGES = {
-    daily: {
-      label: 'Daily',
+    today: {
+      label: 'Today',
       fn: () => {
-        this.setState({
+        return {
           dateStart: moment().startOf('D'),
           dateEnd: moment().endOf('D')
-        });
+        }
+      }
+    },
+    yesterday: {
+      label: 'Yesterday',
+      fn: () => {
+        return {
+          dateStart: moment().startOf('D').subtract(1, 'd'),
+          dateEnd: moment().endOf('D').subtract(1, 'd')
+        }
       }
     },
     alltime: {
       label: 'All time',
       fn: () => {
-        this.setState({
+        return {
           dateStart: null,
           dateEnd: null
-        });
+        }
       }
     }
   }
@@ -186,12 +195,11 @@ class ScoreScreen extends Component {
           <View style={styles.pickerHolder}>
             <Picker style={styles.dateRangePicker} selectedValue={selectedDateRange} onValueChange={(itemValue) => {
               this.setState({
-                selectedDateRange: itemValue
+                selectedDateRange: itemValue,
+                ...this.DATE_RANGES[itemValue].fn()
               });
-              this.DATE_RANGES[itemValue].fn();
             }}>
               {_.map(Object.keys(this.DATE_RANGES), (key, i) => {
-                console.log(this.DATE_RANGES[key]);
                 return <Picker.Item key={i} label={this.DATE_RANGES[key].label} value={key} />
               })}
             </Picker>
