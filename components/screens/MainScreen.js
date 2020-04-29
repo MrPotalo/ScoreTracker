@@ -45,7 +45,7 @@ export class MainScreen extends Component {
             {text: 'Cancel', style: 'cancel'},
             {text: 'Create', onPress: (name) => {
               realm.write(() => {
-                realm.create('Game', {name, players: [], rounds: []});
+                realm.create('Game', {name, players: [], rounds: [{ts: new Date(), scoresets: []}]});
               });
             }}
           ]);

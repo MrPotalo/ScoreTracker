@@ -80,21 +80,30 @@ class ScoreScreen extends Component {
     })
   }
 
-  addRound = () => {
+  applyScores = () => {
+    const { nextScores } = this.state;
     Keyboard.dismiss();
-    if (this.state.nextScores.length === 0) {
+    if (nextScores.length === 0) {
       return;
     }
     realm.write(() => {
-      const scores = [];
-      for (let i = 0; i < this.state.nextScores.length; i++) {
-        scores.push(parseInt(this.state.nextScores[i]) || 0);
+      for (let i = 0; i < this.state.game.players.length; i++) {
+        const game = realm.objects('Game')[this.props.gameIndex];
+        const scores = game.rounds[game.rounds.length - 1].scoresets;
+        if (!scores[i]) {
+          scores.push({scores: []});
+        }
+        scores[i].scores.push(parseInt(nextScores[i]) || 0);
       }
-      realm.objects('Game')[this.props.gameIndex].rounds.push({ ts: new Date(), scores });
     });
-    this.setState({
-      nextScores: []
+    this.setState({ nextScores: [] });
+  }
+
+  addRound = () => {
+    realm.write(() => {
+      realm.objects('Game')[this.props.gameIndex].rounds.push({ ts: new Date(), scoresets: [] });
     });
+    this.updateData();
   }
 
   updateData = () => {
@@ -124,12 +133,12 @@ class ScoreScreen extends Component {
         if (!game.players[scoreIndex]) {
           break;
         }
-        const score = game.rounds.reduce((acc, curr) => {
-          if (dateStart && !moment(curr.ts).isBetween(dateStart, dateEnd)) {
-            return acc;
-          }
-          return acc + (curr.scores[scoreIndex] || 0);
-        }, 0);
+        let score;
+        if (game.rounds[game.rounds.length - 1].scoresets[scoreIndex]) {
+          score = game.rounds[game.rounds.length - 1].scoresets[scoreIndex].scores.sum();
+        } else {
+          score = 0;
+        }
         scoreLabels.push(
           <ScoreLabel index={scoreIndex} key={j} text={game.players[scoreIndex]} score={score} nextScore={nextScores[scoreIndex] || ""} setNextScore={this.setNextScore} />
         );
@@ -144,16 +153,27 @@ class ScoreScreen extends Component {
     const summaryColumns = [];
     const dateColumnContent = [];
     for (let i = 0; i < game.rounds.length; i++) {
-      dateColumnContent.push(<View key={i} style={styles.summaryCell}><Text style={!dateStart || moment(game.rounds[i].ts).isBetween(dateStart, dateEnd) ? null : styles.notInDateRange}>{moment(game.rounds[i].ts).format(DATE_FORMAT)}</Text></View>)
+      dateColumnContent.push(<View key={dateColumnContent.length} style={styles.summaryCell}><Text style={!dateStart || moment(game.rounds[i].ts).isBetween(dateStart, dateEnd) ? null : styles.notInDateRange}>{moment(game.rounds[i].ts).format(DATE_FORMAT)}</Text></View>);
+      const roundLength = game.rounds[i].scoresets[0] ? game.rounds[i].scoresets[0].scores.length - 1 : 0;
+      for (let j = 0; j < roundLength; j++) {
+        dateColumnContent.push(<View key={dateColumnContent.length} style={styles.summaryCell}><Text></Text></View>);
+      }
     }
-    summaryColumns.push(<View key={-1} style={styles.verticalDateSummary}>{dateColumnContent}</View>);
+    summaryColumns.push(<View key={summaryColumns.length} style={styles.verticalDateSummary}>{dateColumnContent}</View>);
     for (let i = 0; i < game.players.length; i++) {
       const summaryColumn = [];
-      summaryColumn.push(<View key={-1} style={styles.summaryCell}><Text>{game.players[i]}</Text></View>);
+      summaryColumn.push(<View key={summaryColumn.length} style={styles.summaryCell}><Text>{game.players[i]}</Text></View>);
       for (let j = 0; j < game.rounds.length; j++) {
-        summaryColumn.push(<View key={j} style={styles.summaryCell}><Text style={!dateStart || moment(game.rounds[j].ts).isBetween(dateStart, dateEnd) ? null : styles.notInDateRange}>{game.rounds[j].scores[i] || 0}</Text></View>)
+        console.log(j, game.rounds[j].scoresets[0]);
+        for (let k = 0; k < (game.rounds[j].scoresets[0] ? game.rounds[j].scoresets[0].scores.length : 1); k++) {
+          let score = 0;
+          if (game.rounds[j].scoresets[i]) {
+            score = game.rounds[j].scoresets[i].scores[k];
+          }
+          summaryColumn.push(<View key={summaryColumn.length} style={styles.summaryCell}><Text style={!dateStart || moment(game.rounds[j].ts).isBetween(dateStart, dateEnd) ? null : styles.notInDateRange}>{score}</Text></View>)
+        }
       }
-      summaryColumns.push(<View key={i} style={styles.verticalSummary}>{summaryColumn}</View>);
+      summaryColumns.push(<View key={summaryColumns.length} style={styles.verticalSummary}>{summaryColumn}</View>);
     }
 
     const roundSummaryContent = <ScrollView style={styles.horizontalScroll} horizontal={true}>
@@ -169,6 +189,8 @@ class ScoreScreen extends Component {
               realm.write(() => {
                 const game = realm.objects('Game')[this.props.gameIndex];
                 game.players.push(name);
+                const currentRound = game.rounds[game.rounds.length - 1];
+                currentRound.scoresets.push({scores: game.players.length > 1 ? Array(currentRound.scoresets[0].scores.length).fill(0) : []});
               });
             }}
           ]);
@@ -176,10 +198,13 @@ class ScoreScreen extends Component {
           <Icon size={25} name="add"></Icon>
         </TouchableOpacity>
         {scoreLabelContent}
-        <TouchableOpacity style={styles.applyButton} onPress={this.addRound}>
+        <TouchableOpacity style={styles.applyButton} onPress={this.applyScores}>
             <Text>Apply Scores</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.deleteButton} onPress={() => {
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.applyButton} onPress={this.addRound}>
+          <Text>Next Game</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.deleteButton} onPress={() => {
             Alert.alert("Delete?", "Are you sure you want to delete " + this.state.game.name + "?", [
               {text: "Cancel", type: 'cancel'},
               {text: 'Confirm', onPress: () => {
@@ -190,21 +215,21 @@ class ScoreScreen extends Component {
               }}
             ]);
           }}>
-            <Text style={styles.deleteText}>Delete Game</Text>
-          </TouchableOpacity>
-          <View style={styles.pickerHolder}>
-            <Picker style={styles.dateRangePicker} selectedValue={selectedDateRange} onValueChange={(itemValue) => {
-              this.setState({
-                selectedDateRange: itemValue,
-                ...this.DATE_RANGES[itemValue].fn()
-              });
-            }}>
-              {_.map(Object.keys(this.DATE_RANGES), (key, i) => {
-                return <Picker.Item key={i} label={this.DATE_RANGES[key].label} value={key} />
-              })}
-            </Picker>
-          </View>
-          {roundSummaryContent}
+          <Text style={styles.deleteText}>Delete Game</Text>
+        </TouchableOpacity>
+        <View style={styles.pickerHolder}>
+          <Picker style={styles.dateRangePicker} selectedValue={selectedDateRange} onValueChange={(itemValue) => {
+            this.setState({
+              selectedDateRange: itemValue,
+              ...this.DATE_RANGES[itemValue].fn()
+            });
+          }}>
+            {_.map(Object.keys(this.DATE_RANGES), (key, i) => {
+              return <Picker.Item key={i} label={this.DATE_RANGES[key].label} value={key} />
+            })}
+          </Picker>
+        </View>
+        {roundSummaryContent}
       </ScrollView>
     )
   }
