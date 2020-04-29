@@ -164,7 +164,6 @@ class ScoreScreen extends Component {
       const summaryColumn = [];
       summaryColumn.push(<View key={summaryColumn.length} style={styles.summaryCell}><Text>{game.players[i]}</Text></View>);
       for (let j = 0; j < game.rounds.length; j++) {
-        console.log(j, game.rounds[j].scoresets[0]);
         for (let k = 0; k < (game.rounds[j].scoresets[0] ? game.rounds[j].scoresets[0].scores.length : 1); k++) {
           let score = 0;
           if (game.rounds[j].scoresets[i]) {
